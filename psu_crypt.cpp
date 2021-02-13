@@ -41,19 +41,27 @@ bitset<16> F[2];
 
 int main(int argc, char ** argv)
 {
-    string str_key = get_key(argv[1]);
+    int mode = atoi(argv[1]);
+    make_subkeys(mode);
+    string str_key = get_key(argv[2]);
     make_80_bit_key(str_key);
-    make_subkeys(0);
-    //encrypt_plaintext_file(argv[2]);
-    
-    /*for (int i = 0; i < ROUNDS; ++i)
-    {
-        for (int j = 0; j < 12; ++j)
-            cout << hex << ESK[i][j] << " ";
-        cout << endl;
-    }*/
-    decrypt_ciphertext_file();
 
+    if (mode == 1 && argc == 4)
+    {
+        encrypt_plaintext_file(argv[3]);
+        cout << "\nPlaintext ASCII file was encrypted and output to ciphertext.txt in output folder\n";
+    }
+    else if (mode == 0 && argc <= 4)
+    {
+        decrypt_ciphertext_file();
+        cout << "\n'ciphertext.txt' located in input folder was decrypted.\nThis decrypted text was output to 'decrypted_after_dec.txt' which can be found in the output folder\n";
+    }
+    else
+    {
+        cout << "\nERROR\n";
+        exit(1);
+    }
+    
     return 0;
 }
 
@@ -158,11 +166,10 @@ void output_decrypted_ciphertext(void)
             t1[i] = C[j][i+8];
             t2[i] = C[j][i];
         }
-        //cout << "t1/t2 = " << hex << t1.to_ullong() << " " << t2.to_ullong() << endl;
         
         char x = t1.to_ullong();
         char y = t2.to_ullong();
-        //cout << x << y;
+
         ofstream myfile;
         myfile.open("output/plaintext_after_dec.txt", ios::app);
         if (myfile.is_open())
@@ -202,10 +209,6 @@ void decrypt_ciphertext_file(void)
                 R[1] = R[3] ^ F[1];
                 R[3] = temp;
 
-                /*for (int j = 0; j < 4; ++j)
-                  cout << hex << R[j].to_ullong();
-                cout << endl;*/
-
                 ++ROUND;
             }
             ROUND = 0;
@@ -240,7 +243,6 @@ void encrypt_plaintext_file(string file_path)
             {
                 while( (c != EOF) && (count != 8) && (pt_file >> noskipws >> ch) )
                 {
-                    //cout << ch << " ";
                     block_64.append(1, ch);
                     ++count;
                     c = pt_file.peek();
@@ -249,23 +251,15 @@ void encrypt_plaintext_file(string file_path)
                 {
                     again = false;
                     int padding = 8 - count + 1;
-                    cout << "pad = " << padding << endl;
                     block_64.pop_back();
-                    cout << "from inside padding block = block_64 = " << block_64.length() << endl;
+
                     for (int i = 0; i < padding; ++i)
-                        block_64.append(1, '!');
-                    cout << "from inside padding block = block_64 = " << block_64 << endl;
+                        block_64.append(1, '.');
                 }
-                //cout << "block64 = " << block_64 << endl;
-                //cout << "count = " << count << endl;
-                //getline(pt_file, block_64);
-                //pt_file.close();
-                //cout << block_64.length() << endl;
-                //
-                cout << "block64= " << block_64 << endl;
 
                 partition_block(block_64);
                 whitening_step();
+
                 for (int i = 0; i < 20; ++i)
                 {
                     F_func(R[0], R[1], ROUND);
@@ -279,10 +273,6 @@ void encrypt_plaintext_file(string file_path)
                     R[1] = R[3] ^ F[1];
                     R[3] = temp;
                     
-                    /*for (int j = 0; j < 4; ++j)
-                      cout << hex << R[j].to_ullong();
-                    cout << endl;*/
-
                     ++ROUND;
                     count = 0;
         
@@ -290,10 +280,6 @@ void encrypt_plaintext_file(string file_path)
                 output_whitening();
                 output_ciphertext();
                 ROUND = 0;
-                    
-                /*for (int i = 0; i < 4; ++i)
-                   cout << hex << C[i].to_ullong() << " ";
-                cout << endl;*/
             }
         }
     pt_file.close();
@@ -322,22 +308,13 @@ void output_ciphertext(void)
     myfile.open("output/ciphertext.txt", ios::app);
     if (myfile.is_open())
     {
-        cout << hex << setw(4) << setfill('0') << C[0].to_ullong();
-        cout << " ";
-        cout << hex << setw(4) << setfill('0') << C[1].to_ullong();
-        cout << " ";
-        cout << hex << setw(4) << setfill('0') << C[2].to_ullong();
-        cout << " ";
-        cout << hex << setw(4) << setfill('0') << C[3].to_ullong();
-        cout << endl;
-
         myfile << hex << setw(4) << setfill('0') << C[0].to_ullong();
         myfile << hex << setw(4) << setfill('0') << C[1].to_ullong();
         myfile << hex << setw(4) << setfill('0') << C[2].to_ullong();
         myfile << hex << setw(4) << setfill('0') << C[3].to_ullong();
         myfile << '\n';
 
-        //myfile << hex << setw(4) << setfill('0') << C[0].to_ullong() << C[1].to_ullong() << C[2].to_ullong() << C[3].to_ullong() << '\n';
+        //myfile << hex << C[0].to_ullong() << C[1].to_ullong() << C[2].to_ullong() << C[3].to_ullong() << '\n';
         myfile.close();
     }
 
@@ -456,7 +433,6 @@ void output_whitening(void)
 
 void whitening_step(void)
 {
-    // partition 80 bit key into four 16-bit keys for whitening 
     bitset<16> bst_white[4];
 
     int k_dex = 79;
